@@ -117,6 +117,21 @@ button{border:0; background:none; padding:0; cursor:pointer;}
 .lamp.on.down{background:var(--red); border-color:var(--red); box-shadow:0 0 22px rgba(255,79,63,.6);}
 .lamps-hint{font-size:11px; color:var(--faint); margin-top:10px;}
 
+/* practice hud */
+.practice-hud{
+  display:flex; align-items:center; justify-content:center; gap:20px;
+  margin-top:14px; padding:6px 20px; border-radius:14px;
+  background:var(--panel); border:1px solid var(--line);
+}
+.hud-item{display:flex; flex-direction:column; align-items:center;}
+.hud-label{font-size:9px; font-weight:800; letter-spacing:.14em; color:var(--faint);}
+.hud-val{font-size:16px; font-weight:800; color:var(--text); font-variant-numeric:tabular-nums; margin-top:2px;}
+.hud-divider{width:1px; height:20px; background:var(--line);}
+.chip.auto-stop{flex-direction:column; gap:2px; line-height:1; font-size:13px;}
+.chip.auto-stop .eyebrow{font-size:9px; letter-spacing:.14em; color:var(--faint); font-weight:800;}
+.chip.auto-stop.off #autoStopVal{color:var(--dim);}
+.chip.auto-stop:not(.off) #autoStopVal{color:var(--amber);}
+
 /* ---------- controls ---------- */
 .controls{flex:0 0 auto; display:flex; flex-direction:column; gap:12px; margin-top:8px;}
 .sliderrow{display:flex; align-items:center; gap:12px;}
@@ -212,7 +227,7 @@ select.chip{appearance:none; -webkit-appearance:none; text-align:center; text-al
 
 .field{margin-bottom:14px;}
 .field label{display:block; font-size:12px; font-weight:700; letter-spacing:.06em; color:var(--dim); margin-bottom:6px; text-transform:uppercase;}
-.field input[type=text],.field input[type=password],.field textarea{
+.field input[type=text],.field input[type=password],.field input[type=number],.field textarea{
   width:100%; background:var(--bg); border:1px solid var(--line); border-radius:12px;
   color:var(--text); font:inherit; font-size:15px; padding:12px 14px; outline:none;
   -webkit-user-select:text; user-select:text;
@@ -369,6 +384,17 @@ textarea{min-height:110px; resize:vertical;}
   <div class="bpm-label">BPM</div>
   <div class="lamps" id="lamps"></div>
   <div class="lamps-hint">Tap a beat to accent or mute it</div>
+  <div class="practice-hud" id="practiceHud">
+    <div class="hud-item">
+      <span class="hud-label">ELAPSED</span>
+      <span class="hud-val" id="hudTimer">00:00</span>
+    </div>
+    <div class="hud-divider"></div>
+    <div class="hud-item">
+      <span class="hud-label">BARS</span>
+      <span class="hud-val" id="hudBar">0</span>
+    </div>
+  </div>
 </div>
 
 <div class="controls">
@@ -389,12 +415,56 @@ textarea{min-height:110px; resize:vertical;}
     <button class="chip count" id="cntChip" aria-label="Count-in">
       <span class="eyebrow">COUNT</span><span id="cntVal">1 bar</span>
     </button>
+    <button class="chip auto-stop off" id="autoStopChip" aria-label="Auto-Stop Target">
+      <span class="eyebrow">TARGET</span><span id="autoStopVal">Off</span>
+    </button>
   </div>
   <div class="transportrow">
     <button class="transport" id="playBtn">&#9654;&nbsp; START</button>
     <button class="nextbtn" id="nextBtn">
       <span class="neyebrow">NEXT &#9656;</span><span id="nextTitle">—</span>
     </button>
+  </div>
+</div>
+
+<!-- PRACTICE TARGET SHEET -->
+<div class="sheet" id="timerSheet">
+  <div class="grab"></div>
+  <header>
+    <span style="width:52px"></span>
+    <h2 style="text-align:center">Practice Target</h2>
+    <button class="close" data-close>&#10005;</button>
+  </header>
+  <div class="body" id="timerBody">
+    <div class="field" style="margin-top:6px">
+      <label>Quick Presets</label>
+      <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:8px;">
+        <button class="chip timer-preset" data-preset="off">Off</button>
+        <button class="chip timer-preset" data-preset="8b">8 Bars</button>
+        <button class="chip timer-preset" data-preset="16b">16 Bars</button>
+        <button class="chip timer-preset" data-preset="32b">32 Bars</button>
+        <button class="chip timer-preset" data-preset="64b">64 Bars</button>
+        <button class="chip timer-preset" data-preset="1m">1 Min</button>
+        <button class="chip timer-preset" data-preset="2m">2 Min</button>
+        <button class="chip timer-preset" data-preset="5m">5 Min</button>
+      </div>
+    </div>
+
+    <div class="field" style="margin-top:16px;">
+      <label>Custom Time Target (Minutes : Seconds)</label>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <input type="number" id="timerMinInput" min="0" max="180" placeholder="Min" style="flex:1; text-align:center;">
+        <span style="font-size:20px; font-weight:800; color:var(--dim);">:</span>
+        <input type="number" id="timerSecInput" min="0" max="59" placeholder="Sec" style="flex:1; text-align:center;">
+      </div>
+    </div>
+
+    <div class="field" style="margin-top:12px;">
+      <label>Or Custom Bar Target</label>
+      <input type="number" id="timerBarInput" min="1" max="999" placeholder="Bars (e.g. 24)" style="width:100%; text-align:center;">
+    </div>
+
+    <button class="primary" id="timerSubmitBtn" style="margin-top:12px;">Set Target &amp; Save</button>
   </div>
 </div>
 
@@ -468,6 +538,20 @@ textarea{min-height:110px; resize:vertical;}
       <button class="switch" id="flashSw"></button>
     </div>
 
+    <div class="field" style="margin-top:14px">
+      <label>Auto-Stop Practice Target</label>
+      <select class="chip" id="autoStopSel" style="width:100%; height:48px; text-align:center; text-align-last:center;">
+        <option value="off">Off (Continuous play)</option>
+        <option value="8b">8 Bars</option>
+        <option value="16b">16 Bars</option>
+        <option value="32b">32 Bars</option>
+        <option value="64b">64 Bars</option>
+        <option value="1m">1 Minute</option>
+        <option value="2m">2 Minutes</option>
+        <option value="5m">5 Minutes</option>
+      </select>
+    </div>
+
     <h2 style="font-size:16px; margin:22px 0 10px">Planning Center Vault Connection</h2>
         <div class="field">
           <label>Relay URL</label>
@@ -499,12 +583,30 @@ const STICK_B64 = {"a": "UklGRiQKAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YQA
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
 
+/* ---------------- auto-stop options ---------------- */
+const AUTO_STOP_OPTS = [
+  { id: "off", label: "Off", bars: 0, secs: 0 },
+  { id: "8b", label: "8 bars", bars: 8, secs: 0 },
+  { id: "16b", label: "16 bars", bars: 16, secs: 0 },
+  { id: "32b", label: "32 bars", bars: 32, secs: 0 },
+  { id: "64b", label: "64 bars", bars: 64, secs: 0 },
+  { id: "1m", label: "1 min", bars: 0, secs: 60 },
+  { id: "2m", label: "2 min", bars: 0, secs: 120 },
+  { id: "5m", label: "5 min", bars: 0, secs: 300 },
+];
+
 /* ---------------- state ---------------- */
 const state = {
   bpm: 120, beats: 4, denom: 4, subdiv: 1,
   accents: [2, 1, 1, 1],          // 2 accent, 1 normal, 0 mute
   sound: "stick", vol: 0.8,
   countIn: 1,                      // per-song: bars of spoken count (0/1/2)
+  autoStop: "off",                 // practice auto-stop target ("off", preset, "custom_time", "custom_bars")
+  customSecs: 0,
+  customBars: 0,
+  barCount: 0,
+  beatCount: 0,
+  startAudioTime: 0,               // ctx.currentTime at practice start (audio-clock, not wall-clock)
   flash: false, wake: true,
   playing: false,
   set: null,                       // {name, songs:[{title,bpm,meter,key}]}
@@ -703,10 +805,46 @@ function scheduler() {
   }
 }
 
+function formatTime(totalSecs) {
+  const m = Math.floor(totalSecs / 60);
+  const s = Math.floor(totalSecs % 60);
+  return String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+}
+
+function getAutoStopConfig() {
+  if (state.autoStop === "custom_time") {
+    return { id: "custom_time", label: formatTime(state.customSecs), bars: 0, secs: state.customSecs };
+  }
+  if (state.autoStop === "custom_bars") {
+    return { id: "custom_bars", label: state.customBars + " bars", bars: state.customBars, secs: 0 };
+  }
+  return AUTO_STOP_OPTS.find((o) => o.id === state.autoStop) || AUTO_STOP_OPTS[0];
+}
+
 function drawLoop() {
   if (!state.playing) return;
   const now = ctx.currentTime;
   while (visQ.length && visQ[0].t <= now + 0.004) paintBeat(visQ.shift());
+
+  // Use the Web Audio clock so elapsed time stays accurate when the tab is backgrounded
+  const elapsedSecs = Math.floor(ctx.currentTime - state.startAudioTime);
+  const timerEl = $("#hudTimer");
+  if (timerEl) timerEl.textContent = formatTime(elapsedSecs);
+
+  const opt = getAutoStopConfig();
+  if (opt && opt.id !== "off") {
+    if (opt.bars > 0 && state.beatCount >= opt.bars * state.beats) {
+      stop();
+      toast(`Practice target reached: ${opt.label} ✓`);
+      return;
+    }
+    if (opt.secs > 0 && elapsedSecs >= opt.secs) {
+      stop();
+      toast(`Practice timer finished: ${opt.label} ✓`);
+      return;
+    }
+  }
+
   requestAnimationFrame(drawLoop);
 }
 
@@ -726,6 +864,14 @@ function paintBeat(e) {
     const f = $("#flash");
     f.classList.remove("go"); void f.offsetWidth; f.classList.add("go");
   }
+  if (!e.count) {
+    state.beatCount++;
+    if (e.b === 0) {
+      state.barCount++;
+      const barEl = $("#hudBar");
+      if (barEl) barEl.textContent = String(state.barCount);
+    }
+  }
 }
 
 async function start() {
@@ -737,6 +883,13 @@ async function start() {
   countPos = 0;
   phase = countTotal > 0 ? "count" : "run";
   nextT = ctx.currentTime + (phase === "count" ? 0.2 : 0.12);
+  state.barCount = 0;
+  state.beatCount = 0;
+  // Anchor to the Web Audio clock so timer stays accurate when backgrounded
+  state.startAudioTime = ctx.currentTime;
+  const barEl = $("#hudBar"), timerEl = $("#hudTimer");
+  if (barEl) barEl.textContent = "0";
+  if (timerEl) timerEl.textContent = "00:00";
   scheduler();
   timer = setInterval(scheduler, TICK_MS);
   state.playing = true;
@@ -1253,6 +1406,66 @@ function setVolume(v, persist = true) {
   if (persist) persistSettings();
 }
 
+let selectedPreset = "off"; // openTimerSheet() updates this from state before the sheet opens
+
+function openTimerSheet() {
+  selectedPreset = state.autoStop;
+  reflectTimerPresets();
+  const minIn = $("#timerMinInput"), secIn = $("#timerSecInput"), barIn = $("#timerBarInput");
+  if (state.autoStop === "custom_time") {
+    if (minIn) minIn.value = Math.floor(state.customSecs / 60) || "";
+    if (secIn) secIn.value = (state.customSecs % 60) || "";
+    if (barIn) barIn.value = "";
+  } else if (state.autoStop === "custom_bars") {
+    if (minIn) minIn.value = "";
+    if (secIn) secIn.value = "";
+    if (barIn) barIn.value = state.customBars || "";
+  } else {
+    if (minIn) minIn.value = "";
+    if (secIn) secIn.value = "";
+    if (barIn) barIn.value = "";
+  }
+  openSheet("timerSheet");
+}
+
+function reflectTimerPresets() {
+  $$(".timer-preset").forEach((b) => {
+    const on = b.dataset.preset === selectedPreset;
+    b.style.borderColor = on ? "var(--amber)" : "var(--line)";
+    b.style.color = on ? "var(--amber)" : "var(--text)";
+  });
+}
+
+function updateAutoStopUI() {
+  const opt = getAutoStopConfig();
+  const chip = $("#autoStopChip");
+  if (chip) {
+    $("#autoStopVal").textContent = opt.label;
+    chip.classList.toggle("off", opt.id === "off");
+  }
+  const sel = $("#autoStopSel");
+  if (sel) {
+    if (opt.id === "custom_time" || opt.id === "custom_bars") {
+      // Dynamically add a custom option so the dropdown reflects the active value
+      let customOpt = sel.querySelector(`option[value="${opt.id}"]`);
+      if (!customOpt) {
+        customOpt = document.createElement("option");
+        customOpt.value = opt.id;
+        sel.appendChild(customOpt);
+      }
+      customOpt.textContent = opt.label;
+      sel.value = opt.id;
+    } else {
+      // Remove any stale custom options when switching back to a preset
+      ["custom_time", "custom_bars"].forEach((id) => {
+        const o = sel.querySelector(`option[value="${id}"]`);
+        if (o) o.remove();
+      });
+      sel.value = opt.id;
+    }
+  }
+}
+
 function reflectSettings() {
   $$(".snd").forEach((b) => {
     const on = b.dataset.snd === state.sound;
@@ -1263,11 +1476,13 @@ function reflectSettings() {
   $("#wakeSw").classList.toggle("on", state.wake);
   $("#flashSw").classList.toggle("on", state.flash);
   $("#pcoRelay").value = state.creds.relay;
+  updateAutoStopUI();
 }
 function persistSettings() {
   store.set("settings", {
     sound: state.sound, vol: state.vol, wake: state.wake, flash: state.flash,
     bpm: state.bpm, beats: state.beats, denom: state.denom,
+    autoStop: state.autoStop, customSecs: state.customSecs, customBars: state.customBars,
   });
 }
 function persistCreds() {
@@ -1315,6 +1530,43 @@ function wire() {
     state.countIn = (state.countIn + 1) % 3;
     updateCountChip();
     saveSongProp({ countIn: state.countIn });
+  });
+  $("#autoStopChip").addEventListener("click", openTimerSheet);
+  $$(".timer-preset").forEach((b) => {
+    b.addEventListener("click", () => {
+      selectedPreset = b.dataset.preset;
+      $("#timerMinInput").value = "";
+      $("#timerSecInput").value = "";
+      $("#timerBarInput").value = "";
+      reflectTimerPresets();
+    });
+  });
+  $("#timerSubmitBtn").addEventListener("click", () => {
+    // Clamp inputs — HTML max/min attributes are advisory only on mobile keyboards
+    const minVal = Math.max(0, Math.min(180, parseInt($("#timerMinInput").value, 10) || 0));
+    const secVal = Math.max(0, Math.min(59,  parseInt($("#timerSecInput").value,  10) || 0));
+    const barVal = Math.max(0, Math.min(999, parseInt($("#timerBarInput").value,  10) || 0));
+
+    if (minVal > 0 || secVal > 0) {
+      state.customSecs = (minVal * 60) + secVal;
+      state.autoStop = "custom_time";
+    } else if (barVal > 0) {
+      state.customBars = barVal;
+      state.autoStop = "custom_bars";
+    } else {
+      state.autoStop = selectedPreset || "off";
+    }
+
+    updateAutoStopUI();
+    persistSettings();
+    closeSheets();
+    const cfg = getAutoStopConfig();
+    toast(cfg.id === "off" ? "Practice target: Continuous" : `Practice target set to ${cfg.label} ✓`);
+  });
+  $("#autoStopSel").addEventListener("change", (e) => {
+    state.autoStop = e.target.value;
+    updateAutoStopUI();
+    persistSettings();
   });
 
   $("#carousel").addEventListener("scroll", onCarouselScroll, { passive: true });
@@ -1388,9 +1640,13 @@ async function init() {
     state.vol = settings.vol ?? state.vol;
     state.wake = settings.wake ?? state.wake;
     state.flash = settings.flash ?? state.flash;
+    state.autoStop = settings.autoStop || "off";
+    state.customSecs = settings.customSecs || 0;
+    state.customBars = settings.customBars || 0;
     if (settings.beats) applyMeter(settings.beats + "/" + (settings.denom || 4));
     if (settings.bpm) setBpm(settings.bpm);
   }
+  updateAutoStopUI();
   const cached = (setCache && setCache.songs && setCache.songs.length)
     ? setCache
     : JSON.parse(JSON.stringify(DEMO_SET));
