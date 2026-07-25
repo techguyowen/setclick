@@ -365,6 +365,97 @@ textarea{min-height:110px; resize:vertical;}
   .step{width:46px; height:46px; font-size:22px;}
   .sliderrow{gap:10px;}
 }
+
+/* ---------- inline setlist editor ---------- */
+.edit-row{
+  display:flex; align-items:center; gap:10px;
+  background:var(--panel-2); border:1.5px solid var(--line);
+  border-radius:14px; padding:10px 12px; margin-bottom:8px;
+  transition:border-color .15s, opacity .15s;
+}
+.edit-row.dragging{opacity:.35;}
+.edit-row.drop-target{border-color:var(--amber-dim);}
+.drag-handle{
+  color:var(--faint); font-size:18px; cursor:grab; flex:0 0 auto;
+  padding:4px 4px; touch-action:none; line-height:1; letter-spacing:-.04em;
+}
+.drag-handle:active{cursor:grabbing; color:var(--dim);}
+.edit-row-info{flex:1; min-width:0;}
+.edit-row-info .er-title{
+  font-size:14px; font-weight:700;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.edit-row-info .er-meta{font-size:11px; color:var(--dim); margin-top:2px;}
+.edit-row-acts{display:flex; gap:6px; flex:0 0 auto;}
+.er-btn{
+  width:34px; height:34px; border-radius:9px;
+  background:var(--panel); border:1px solid var(--line);
+  font-size:15px; display:flex; align-items:center; justify-content:center;
+  flex:0 0 auto;
+}
+.er-btn:active{background:var(--panel-2); border-color:var(--amber-dim);}
+.er-btn.del:active{border-color:var(--red); color:var(--red);}
+.ghost-row{
+  position:fixed; pointer-events:none; z-index:300;
+  box-shadow:0 12px 40px rgba(0,0,0,.6); border-radius:14px;
+  opacity:.92; background:var(--panel-2);
+  border:1.5px solid var(--amber-dim);
+}
+.set-name-edit{
+  width:100%; background:var(--bg); border:1px solid var(--line);
+  border-radius:12px; color:var(--text); font:inherit; font-size:16px;
+  font-weight:700; padding:11px 14px; outline:none; margin-bottom:14px;
+  -webkit-user-select:text; user-select:text;
+}
+.set-name-edit:focus{border-color:var(--amber-dim);}
+.sf-field{margin-bottom:12px;}
+.sf-field label{
+  display:block; font-size:11px; font-weight:700; letter-spacing:.06em;
+  color:var(--dim); margin-bottom:5px; text-transform:uppercase;
+}
+.sf-field input,.sf-field select{
+  width:100%; background:var(--bg); border:1px solid var(--line);
+  border-radius:12px; color:var(--text); font:inherit; font-size:15px;
+  padding:11px 14px; outline:none; -webkit-user-select:text; user-select:text;
+  appearance:none; -webkit-appearance:none; text-align:center; text-align-last:center;
+}
+.sf-field input:focus,.sf-field select:focus{border-color:var(--amber-dim);}
+.sf-row{display:flex; gap:10px;}
+.sf-row .sf-field{flex:1;}
+
+/* ---------- set sheet decluttering & layout ---------- */
+.set-hdr{
+  display:flex; align-items:center; justify-content:space-between;
+  margin-top:2px; margin-bottom:10px; padding:0 2px;
+}
+.set-hdr-title{
+  font-size:12px; font-weight:800; letter-spacing:.06em;
+  color:var(--dim); text-transform:uppercase;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.set-hdr-btn{
+  font-size:12px; font-weight:700; color:var(--amber);
+  background:var(--amber-dim); padding:4px 10px; border-radius:8px;
+  border:none; cursor:pointer; flex:0 0 auto;
+}
+.set-hdr-btn:active{opacity:.7;}
+.set-act-grid{
+  display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px;
+}
+.action-chip{
+  background:var(--panel-2); border:1px solid var(--line);
+  border-radius:12px; height:42px; font-size:13px; font-weight:600;
+  color:var(--text); display:flex; align-items:center; justify-content:center;
+  gap:6px; cursor:pointer; transition:border-color .15s, background .15s;
+}
+.action-chip:active{background:var(--panel); border-color:var(--amber-dim);}
+.action-link{
+  background:transparent; border:none; color:var(--dim);
+  font-size:12px; font-weight:600; text-align:center; width:100%;
+  padding:10px 0 2px; cursor:pointer; text-decoration:underline;
+  text-underline-offset:3px; opacity:.85; display:block;
+}
+.action-link:active{opacity:1; color:var(--text);}
 </style>
 </head>
 <body>
@@ -416,7 +507,7 @@ textarea{min-height:110px; resize:vertical;}
       <span class="eyebrow">COUNT</span><span id="cntVal">1 bar</span>
     </button>
     <button class="chip auto-stop off" id="autoStopChip" aria-label="Auto-Stop Target">
-      <span class="eyebrow">TARGET</span><span id="autoStopVal">Off</span>
+      <span class="eyebrow">AUTO STOP</span><span id="autoStopVal">Off</span>
     </button>
   </div>
   <div class="transportrow">
@@ -536,20 +627,6 @@ textarea{min-height:110px; resize:vertical;}
     <div class="togglerow">
       <div><div class="tl">Flash on beat 1</div><div class="ts">Visual pulse for silent practice</div></div>
       <button class="switch" id="flashSw"></button>
-    </div>
-
-    <div class="field" style="margin-top:14px">
-      <label>Auto-Stop Practice Target</label>
-      <select class="chip" id="autoStopSel" style="width:100%; height:48px; text-align:center; text-align-last:center;">
-        <option value="off">Off (Continuous play)</option>
-        <option value="8b">8 Bars</option>
-        <option value="16b">16 Bars</option>
-        <option value="32b">32 Bars</option>
-        <option value="64b">64 Bars</option>
-        <option value="1m">1 Minute</option>
-        <option value="2m">2 Minutes</option>
-        <option value="5m">5 Minutes</option>
-      </select>
     </div>
 
     <h2 style="font-size:16px; margin:22px 0 10px">Planning Center Vault Connection</h2>
@@ -1094,26 +1171,63 @@ function showLoading(msg) {
 function viewHome() {
   setNav.length = 0;
   let html = "";
-  if (state.set && state.set.songs.length) {
+  if (state.set) {
     if (state.set.demo) {
       html += `<div class="notice" style="margin-top:6px">This is a <b>demo set</b> so you can feel the app. Load your real set and the titles, BPMs, and meters come straight from <b>Planning Center</b>.</div>`;
       html += state.set.songs.map((s, i) => songRow(s, i)).join("");
-      html += `<button class="primary" id="loadPcoBtn" style="margin-top:8px">Load my set from Planning Center</button>`;
+      html += `<button class="primary" id="loadPcoBtn" style="margin-top:12px">Load from Planning Center</button>`;
+      html += `<div class="set-act-grid">
+        <button class="action-chip" id="editSetBtn">✎ Edit Set</button>
+        <button class="action-chip" id="manualBtn">📝 Paste Set</button>
+      </div>`;
     } else {
-      html += `<div class="field" style="margin-top:2px"><label>${escapeHtml(state.set.name)}</label></div>`;
-      html += state.set.songs.map((s, i) => songRow(s, i)).join("");
-      if (state.set.src)
-        html += `<button class="secondary" id="reimportBtn">Re-import this set — discard my changes</button>`;
-      html += `<button class="secondary" id="loadPcoBtn">Load a different set from Planning Center</button>`;
+      html += `<div class="set-hdr">
+        <span class="set-hdr-title">${escapeHtml(state.set.name)}</span>
+        <button class="set-hdr-btn" id="editSetHdrBtn">✎ Edit set</button>
+      </div>`;
+      if (state.set.songs.length) {
+        html += state.set.songs.map((s, i) => songRow(s, i)).join("");
+      } else {
+        html += `<div class="notice" style="margin-top:2px; margin-bottom:12px;">This set is empty. Tap <b>Edit set</b> to add songs.</div>`;
+      }
+      html += `<div class="set-act-grid">
+        <button class="action-chip" id="loadPcoBtn">☁️ Planning Center</button>
+        <button class="action-chip" id="manualBtn">📝 Paste Set</button>
+      </div>`;
+      html += `<div style="display:flex; gap:8px; margin-top:8px;">
+        <button class="action-chip" style="flex:1;" id="newSetBtn">➕ New Empty Set</button>
+        <button class="action-chip" style="flex:1;" id="editSetBtn">✎ Reorder / Edit</button>
+      </div>`;
+      if (state.set.src) {
+        html += `<button class="action-link" id="reimportBtn">↺ Re-import original from Planning Center</button>`;
+      }
     }
   } else {
     html += `<div class="notice" style="margin-top:6px">Pull this week's set straight from <b>Planning Center Services</b> — song titles, BPMs, and meters come from each song's arrangement.</div>`;
     html += `<button class="primary" id="loadPcoBtn">Load from Planning Center</button>`;
+    html += `<div class="set-act-grid">
+      <button class="action-chip" id="manualBtn">📝 Paste Set</button>
+      <button class="action-chip" id="newSetBtn">➕ New Set</button>
+    </div>`;
   }
-  html += `<button class="secondary" id="manualBtn">Type or paste a set manually</button>`;
   setView(html, state.set ? "Your set" : "Load a set", false);
-  $("#loadPcoBtn").addEventListener("click", goServiceTypes);
-  $("#manualBtn").addEventListener("click", viewManual);
+
+  const loadPco = $("#loadPcoBtn");
+  if (loadPco) loadPco.addEventListener("click", goServiceTypes);
+  const manual = $("#manualBtn");
+  if (manual) manual.addEventListener("click", viewManual);
+  const newSet = $("#newSetBtn");
+  if (newSet) newSet.addEventListener("click", () => {
+    state.set = { name: "New Set", songs: [] };
+    state.songIx = -1;
+    store.set("setCache", state.set);
+    updateSetPill(); buildCarousel();
+    viewEditSetlist();
+  });
+  ["#editSetBtn", "#editSetHdrBtn"].forEach((id) => {
+    const b = $(id);
+    if (b) b.addEventListener("click", viewEditSetlist);
+  });
   const ri = $("#reimportBtn");
   if (ri) ri.addEventListener("click", () =>
     goSetlist(state.set.src.stId, state.set.src.planId, state.set.src.label));
@@ -1231,6 +1345,234 @@ function parseManual(text) {
   }).filter(Boolean);
 }
 
+/* ---------------- inline setlist editor ---------------- */
+
+function viewEditSetlist() {
+  setNav.push("home");
+  const set = state.set;
+  const isEmpty = !set.songs.length;
+  const html = `
+    <input class="set-name-edit" id="setNameInput" value="${escapeHtml(set.name)}" placeholder="Set name" maxlength="80">
+    <div id="editSongList">${set.songs.map((s, i) => editRowHTML(s, i)).join("")}</div>
+    ${isEmpty ? `<div class="notice" style="margin-top:2px; margin-bottom:14px;">No songs yet — tap <b>Add Song</b> to begin.</div>` : ""}
+    <button class="secondary" id="addSongBtn" style="margin-top:${isEmpty ? "0" : "4"}px;">➕ Add Song</button>
+    <button class="primary" id="doneEditBtn" style="margin-top:10px;">Done</button>
+  `;
+  setView(html, "Edit Setlist", true);
+
+  $("#setNameInput").addEventListener("input", (e) => {
+    state.set.name = e.target.value || "My Set";
+    updateSetPill();
+    store.set("setCache", state.set);
+  });
+  $("#addSongBtn").addEventListener("click", () => viewSongForm(-1));
+  $("#doneEditBtn").addEventListener("click", () => {
+    if (state.set.songs.length && state.songIx < 0) {
+      loadSong(0, { instant: true, silent: true });
+    }
+    viewHome();
+  });
+
+  $$("#editSongList .er-edit").forEach((b) =>
+    b.addEventListener("click", () => viewSongForm(+b.dataset.ix)));
+  $$("#editSongList .er-clone").forEach((b) =>
+    b.addEventListener("click", () => {
+      const ix = +b.dataset.ix;
+      const clone = Object.assign({}, state.set.songs[ix]);
+      state.set.songs.splice(ix + 1, 0, clone);
+      persist();
+      toast("Song cloned ✓");
+      viewEditSetlist();
+    }));
+  $$("#editSongList .er-del").forEach((b) =>
+    b.addEventListener("click", () => {
+      const ix = +b.dataset.ix;
+      const removed = state.set.songs.splice(ix, 1)[0];
+      if (!state.set.songs.length) {
+        state.songIx = -1;
+      } else if (state.songIx >= state.set.songs.length) {
+        state.songIx = state.set.songs.length - 1;
+      }
+      persist();
+      toast(`Removed “${removed.title}”`);
+      viewEditSetlist();
+    }));
+
+  initDrag($("#editSongList"));
+}
+
+function editRowHTML(s, i) {
+  const meta = [s.key ? "Key " + s.key : "", s.bpm ? s.bpm + " BPM" : "", s.meter || ""]
+    .filter(Boolean).join(" · ");
+  return `
+    <div class="edit-row" data-ix="${i}">
+      <span class="drag-handle" aria-label="Drag to reorder">⋮⋮</span>
+      <div class="edit-row-info">
+        <div class="er-title">${escapeHtml(s.title)}</div>
+        ${meta ? `<div class="er-meta">${escapeHtml(meta)}</div>` : ""}
+      </div>
+      <div class="edit-row-acts">
+        <button class="er-btn er-edit" data-ix="${i}" aria-label="Edit">✎</button>
+        <button class="er-btn er-clone" data-ix="${i}" aria-label="Clone">⧉</button>
+        <button class="er-btn er-del del" data-ix="${i}" aria-label="Delete">×</button>
+      </div>
+    </div>`;
+}
+
+const SIGS_FORM = ["2/4","3/4","4/4","5/4","6/4","6/8","7/8","9/8","12/8"];
+
+function viewSongForm(ix) {
+  setNav.push("editSetlist");
+  const isNew = ix < 0;
+  const s = isNew
+    ? { title: "", bpm: "", meter: "4/4", key: "", subdiv: 1, countIn: 1 }
+    : Object.assign({}, state.set.songs[ix]);
+
+  const sigOpts = SIGS_FORM
+    .map((m) => `<option value="${m}"${m === (s.meter || "4/4") ? " selected" : ""}>${m}</option>`)
+    .join("");
+
+  setView(`
+    <div class="sf-field">
+      <label>Song Title *</label>
+      <input type="text" id="sfTitle" value="${escapeHtml(s.title)}" placeholder="e.g. Goodness of God" maxlength="80" autocomplete="off">
+    </div>
+    <div class="sf-row">
+      <div class="sf-field">
+        <label>BPM</label>
+        <input type="number" id="sfBpm" value="${s.bpm || ""}" placeholder="e.g. 126" min="30" max="300">
+      </div>
+      <div class="sf-field">
+        <label>Time Sig.</label>
+        <select id="sfMeter">${sigOpts}</select>
+      </div>
+    </div>
+    <div class="sf-field">
+      <label>Key (optional)</label>
+      <input type="text" id="sfKey" value="${escapeHtml(s.key || "")}" placeholder="e.g. G or Eb" maxlength="8" autocomplete="off">
+    </div>
+    <button class="primary" id="sfSaveBtn" style="margin-top:8px;">${isNew ? "➕ Add Song" : "✓ Save Changes"}</button>
+    ${!isNew ? `<button class="secondary" id="sfDelBtn">Remove This Song</button>` : ""}
+  `, isNew ? "Add Song" : "Edit Song", true);
+
+  setTimeout(() => { const t = $("#sfTitle"); if (t) t.focus(); }, 80);
+
+  $("#sfSaveBtn").addEventListener("click", () => {
+    const title = $("#sfTitle").value.trim();
+    if (!title) { toast("Song title is required"); return; }
+    const bpmRaw = parseInt($("#sfBpm").value, 10);
+    const bpm = (bpmRaw >= 30 && bpmRaw <= 300) ? bpmRaw : null;
+    const key = $("#sfKey").value.trim();
+    const meter = $("#sfMeter").value;
+    const song = Object.assign({}, s, { title, bpm, key, meter });
+    if (isNew) {
+      state.set.songs.push(song);
+    } else {
+      state.set.songs[ix] = song;
+      loadSong(ix, { instant: true, silent: true });
+    }
+    persist();
+    setNav.pop(); // remove "editSetlist" we just pushed, viewEditSetlist will re-push
+    viewEditSetlist();
+    toast(isNew ? "Song added ✓" : "Saved ✓");
+  });
+
+  const delBtn = $("#sfDelBtn");
+  if (delBtn) delBtn.addEventListener("click", () => {
+    const removed = state.set.songs.splice(ix, 1)[0];
+    if (!state.set.songs.length) {
+      state.songIx = -1;
+    } else if (state.songIx >= state.set.songs.length) {
+      state.songIx = state.set.songs.length - 1;
+    }
+    persist();
+    setNav.pop();
+    viewEditSetlist();
+    toast(`Removed “${removed.title}”`);
+  });
+}
+
+function persist() {
+  buildCarousel(); updateSetPill();
+  store.set("setCache", state.set);
+}
+
+/* ---- drag-and-drop reordering ---- */
+function initDrag(listEl) {
+  if (!listEl) return;
+  let dragEl = null, ghost = null, origY = 0, ghostTop0 = 0;
+  let rows = [], dropTarget = null;
+
+  listEl.addEventListener("pointerdown", (ev) => {
+    if (!ev.target.closest(".drag-handle")) return;
+    ev.preventDefault();
+    dragEl = ev.target.closest(".edit-row");
+    if (!dragEl) return;
+    rows = [...listEl.querySelectorAll(".edit-row")];
+    const rect = dragEl.getBoundingClientRect();
+    origY = ev.clientY;
+    ghostTop0 = rect.top;
+
+    ghost = dragEl.cloneNode(true);
+    ghost.className = "edit-row ghost-row";
+    Object.assign(ghost.style, {
+      left: rect.left + "px", top: rect.top + "px",
+      width: rect.width + "px", height: rect.height + "px",
+    });
+    document.body.appendChild(ghost);
+    dragEl.classList.add("dragging");
+    listEl.setPointerCapture(ev.pointerId);
+  });
+
+  listEl.addEventListener("pointermove", (ev) => {
+    if (!dragEl) return;
+    ghost.style.top = (ghostTop0 + ev.clientY - origY) + "px";
+    const ghostMidY = ghost.getBoundingClientRect().top + ghost.getBoundingClientRect().height / 2;
+    let newTarget = null;
+    for (const r of rows) {
+      if (r === dragEl) continue;
+      const rr = r.getBoundingClientRect();
+      if (ghostMidY < rr.top + rr.height / 2) { newTarget = r; break; }
+    }
+    if (newTarget !== dropTarget) {
+      rows.forEach((r) => r.classList.remove("drop-target"));
+      if (newTarget) newTarget.classList.add("drop-target");
+      dropTarget = newTarget;
+    }
+  });
+
+  const endDrag = () => {
+    if (!dragEl) return;
+    rows.forEach((r) => { r.classList.remove("dragging", "drop-target"); });
+    ghost.remove(); ghost = null;
+
+    const fromIx = +dragEl.dataset.ix;
+    let toIx = dropTarget ? +dropTarget.dataset.ix : state.set.songs.length;
+    if (toIx > fromIx) toIx--;    // account for the removed element
+
+    if (toIx !== fromIx) {
+      const songs = state.set.songs;
+      const [moved] = songs.splice(fromIx, 1);
+      songs.splice(toIx, 0, moved);
+
+      // Keep active song index correct
+      if (state.songIx === fromIx) state.songIx = toIx;
+      else if (fromIx < state.songIx && toIx >= state.songIx) state.songIx--;
+      else if (fromIx > state.songIx && toIx <= state.songIx) state.songIx++;
+
+      persist();
+      viewEditSetlist();
+    }
+    dragEl = null; dropTarget = null;
+  };
+  listEl.addEventListener("pointerup", endDrag);
+  listEl.addEventListener("pointercancel", () => {
+    if (ghost) { ghost.remove(); ghost = null; }
+    rows.forEach((r) => r.classList.remove("dragging", "drop-target"));
+    dragEl = null; dropTarget = null;
+  });
+}
+
 /* ---------------- song loading / carousel ---------------- */
 function loadSong(ix, opts = {}) {
   if (!state.set || !state.set.songs[ix]) return;
@@ -1346,9 +1688,10 @@ async function nextSongAndGo() {
 
 function updateSetPill() {
   const pill = $("#setPill");
-  if (state.set && state.set.songs.length) {
+  if (state.set) {
     pill.classList.add("connected");
-    $("#setPillText").textContent = state.set.name + " · " + state.set.songs.length + " songs";
+    const count = state.set.songs ? state.set.songs.length : 0;
+    $("#setPillText").textContent = state.set.name + " · " + count + " " + (count === 1 ? "song" : "songs");
   } else {
     pill.classList.remove("connected");
     $("#setPillText").textContent = "No set loaded — tap to load";
@@ -1442,27 +1785,6 @@ function updateAutoStopUI() {
   if (chip) {
     $("#autoStopVal").textContent = opt.label;
     chip.classList.toggle("off", opt.id === "off");
-  }
-  const sel = $("#autoStopSel");
-  if (sel) {
-    if (opt.id === "custom_time" || opt.id === "custom_bars") {
-      // Dynamically add a custom option so the dropdown reflects the active value
-      let customOpt = sel.querySelector(`option[value="${opt.id}"]`);
-      if (!customOpt) {
-        customOpt = document.createElement("option");
-        customOpt.value = opt.id;
-        sel.appendChild(customOpt);
-      }
-      customOpt.textContent = opt.label;
-      sel.value = opt.id;
-    } else {
-      // Remove any stale custom options when switching back to a preset
-      ["custom_time", "custom_bars"].forEach((id) => {
-        const o = sel.querySelector(`option[value="${id}"]`);
-        if (o) o.remove();
-      });
-      sel.value = opt.id;
-    }
   }
 }
 
@@ -1563,7 +1885,7 @@ function wire() {
     const cfg = getAutoStopConfig();
     toast(cfg.id === "off" ? "Practice target: Continuous" : `Practice target set to ${cfg.label} ✓`);
   });
-  $("#autoStopSel").addEventListener("change", (e) => {
+  $("#autoStopSel")?.addEventListener("change", (e) => {
     state.autoStop = e.target.value;
     updateAutoStopUI();
     persistSettings();
@@ -1578,6 +1900,7 @@ function wire() {
   $("#setBack").addEventListener("click", () => {
     const prev = setNav.pop();
     if (!prev || prev === "home") viewHome();
+    else if (prev === "editSetlist") viewEditSetlist();
     else if (prev === "types") { setNav.pop(); goServiceTypes(); }
     else if (prev === "plans") { setNav.pop(); setNav.pop(); goServiceTypes(); }
   });
