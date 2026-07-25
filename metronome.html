@@ -372,14 +372,15 @@ textarea{min-height:110px; resize:vertical;}
   background:var(--panel-2); border:1.5px solid var(--line);
   border-radius:14px; padding:10px 12px; margin-bottom:8px;
   transition:border-color .15s, opacity .15s;
+  cursor:grab; touch-action:none; -webkit-user-select:none; user-select:none;
 }
+.edit-row:active{cursor:grabbing;}
 .edit-row.dragging{opacity:.35;}
 .edit-row.drop-target{border-color:var(--amber-dim);}
 .drag-handle{
-  color:var(--faint); font-size:18px; cursor:grab; flex:0 0 auto;
-  padding:4px 4px; touch-action:none; line-height:1; letter-spacing:-.04em;
+  color:var(--faint); font-size:18px; flex:0 0 auto;
+  padding:4px 4px; line-height:1; letter-spacing:-.04em;
 }
-.drag-handle:active{cursor:grabbing; color:var(--dim);}
 .edit-row-info{flex:1; min-width:0;}
 .edit-row-info .er-title{
   font-size:14px; font-weight:700;
@@ -1501,14 +1502,15 @@ function persist() {
 function initDrag(listEl) {
   if (!listEl) return;
   let dragEl = null, ghost = null, origY = 0, ghostTop0 = 0;
-  let rows = [], dropTarget = null;
+  let rows = [], dropTargetIx = -1;
 
   listEl.addEventListener("pointerdown", (ev) => {
-    if (!ev.target.closest(".drag-handle")) return;
+    if (ev.target.closest(".er-btn")) return; // Don't drag if tapping action buttons (Edit, Clone, Delete)
     ev.preventDefault();
     dragEl = ev.target.closest(".edit-row");
     if (!dragEl) return;
     rows = [...listEl.querySelectorAll(".edit-row")];
+    dropTargetIx = +dragEl.dataset.ix;
     const rect = dragEl.getBoundingClientRect();
     origY = ev.clientY;
     ghostTop0 = rect.top;
@@ -1528,29 +1530,38 @@ function initDrag(listEl) {
     if (!dragEl) return;
     ghost.style.top = (ghostTop0 + ev.clientY - origY) + "px";
     const ghostMidY = ghost.getBoundingClientRect().top + ghost.getBoundingClientRect().height / 2;
-    let newTarget = null;
-    for (const r of rows) {
-      if (r === dragEl) continue;
-      const rr = r.getBoundingClientRect();
-      if (ghostMidY < rr.top + rr.height / 2) { newTarget = r; break; }
+
+    const fromIx = +dragEl.dataset.ix;
+    let targetIx = fromIx;
+
+    for (let i = 0; i < rows.length; i++) {
+      const rr = rows[i].getBoundingClientRect();
+      const midY = rr.top + rr.height / 2;
+      if (ghostMidY < midY) {
+        targetIx = i;
+        break;
+      }
+      targetIx = i;
     }
-    if (newTarget !== dropTarget) {
+
+    if (targetIx !== dropTargetIx) {
       rows.forEach((r) => r.classList.remove("drop-target"));
-      if (newTarget) newTarget.classList.add("drop-target");
-      dropTarget = newTarget;
+      if (targetIx !== fromIx && rows[targetIx]) {
+        rows[targetIx].classList.add("drop-target");
+      }
+      dropTargetIx = targetIx;
     }
   });
 
   const endDrag = () => {
     if (!dragEl) return;
-    rows.forEach((r) => { r.classList.remove("dragging", "drop-target"); });
-    ghost.remove(); ghost = null;
+    rows.forEach((r) => r.classList.remove("dragging", "drop-target"));
+    if (ghost) { ghost.remove(); ghost = null; }
 
     const fromIx = +dragEl.dataset.ix;
-    let toIx = dropTarget ? +dropTarget.dataset.ix : state.set.songs.length;
-    if (toIx > fromIx) toIx--;    // account for the removed element
+    const toIx = dropTargetIx;
 
-    if (toIx !== fromIx) {
+    if (toIx !== -1 && toIx !== fromIx) {
       const songs = state.set.songs;
       const [moved] = songs.splice(fromIx, 1);
       songs.splice(toIx, 0, moved);
@@ -1563,13 +1574,13 @@ function initDrag(listEl) {
       persist();
       viewEditSetlist();
     }
-    dragEl = null; dropTarget = null;
+    dragEl = null; dropTargetIx = -1;
   };
   listEl.addEventListener("pointerup", endDrag);
   listEl.addEventListener("pointercancel", () => {
     if (ghost) { ghost.remove(); ghost = null; }
     rows.forEach((r) => r.classList.remove("dragging", "drop-target"));
-    dragEl = null; dropTarget = null;
+    dragEl = null; dropTargetIx = -1;
   });
 }
 
